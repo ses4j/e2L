@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import urllib.request, json, datetime
+import urllib.request, json, datetime, os
 import requests
 import codecs
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Global variable
 LANGUAGE = [ ['Croatian', 'HR', 'Includes all species and non-species taxa recorded in Croatia. Thanks to Josip Turkalj for these translations.'],
@@ -57,6 +60,27 @@ CATEGORIE = [
 	['form', 'Miscellaneous other taxa, including recently-described species yet to be accepted or distinctive forms that are not universally accepted (Red-tailed Hawk (Northern), Upland Goose (Bar-breasted))']
 ]
 
+cache_path = '_cache'
+
+
+def _fetch_data(url, filename, expires=None):
+    if not os.path.exists(cache_path):
+        os.mkdir(cache_path)
+
+    filepath = os.path.join(cache_path, filename)
+    if not os.path.exists(filepath):
+        logger.info('{} does not exist -- downloading from {}.'.format(filepath, url))
+        data = requests.get(url)
+        f = open(filepath, 'w')
+        f.write(data.text)
+        f.close()
+    else:
+        logger.debug('{} exists -- using cache for {}.'.format(filepath, url))
+
+
+    return open(filepath)
+
+
 def bird_creator(code_loc, lang, cat, byear, eyear, bmonth, emonth):
 	poss_lang = [l[1] for l in LANGUAGE]
 	poss_cat =  [c[0] for c in CATEGORIE]
@@ -95,15 +119,8 @@ def load_barchart(code_loc, byear, eyear, bmonth, emonth):
 	url = 'http://ebird.org/ebird/barchartData?r={code_loc}&bmo={bmonth}&emo={emonth}&byr={byear}&eyr={eyear}&fmt=tsv'.format(
 		code_loc=code_loc, byear=byear, eyear=eyear, bmonth=bmonth, emonth=emonth)
 
-	print('barchar url: ')
-	print(url)
-	r = requests.get(url)
-
-	f = open('_barchart.tsv', 'wb')
-	f.write(r.content)
-	f.close()
-
-	lines = codecs.open('_barchart.tsv','r', encoding='utf8')
+	f = _fetch_data(url, '_barchart.tsv')
+	lines = f.readlines()
 
 	bc_bird_list = []
 	info = {}
@@ -145,8 +162,9 @@ def load_taxa(lang, cat):
 	url = url_base+'?'
 	url += 'cat=' + ','.join(cat) + '&'
 	url += 'fmt=' + fmt + '&'
-	response = urllib.request.urlopen(url)
-	taxa = json.loads( response.read().decode('utf-8'))
+
+	data = _fetch_data(url, '_taxa.json')
+	taxa = json.loads( data.read() )
 	for t in taxa:
 		t['lang'] = {}
 		t['lang']['EN'] = t['comName']
@@ -188,14 +206,14 @@ def week_to_else(week):
 	return month, season, year
 
 
-def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, family, format, info):
+def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, family, format, info, template_path='Template_default.tex'):
 	family_current = ''
 
 	# Start Writing
 	f = open('latex/'+ projname.replace(' ','')  + '.tex', 'w')
 
 	# Import preformatted text
-	f2 = open('Template_default.tex', 'r')
+	f2 = open(template_path, 'r')
 	for line in f2:
 		if 'newcommand{\maxnum}' in line:
 			line = line[:-1]+'100.00}\n'
@@ -286,7 +304,7 @@ class TableInput:
 				season = ['Sp','Sm','F','W']#['Spring','Summer','Fall','Winter']
 				self.title = season[self.option2] +'\\footnotesize{ (' +str(round(info['samples_size']['season'][self.option2])) +')} '
 			elif self.option1 == 'month':
-				month = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'June', 'Jul', 'Aug', 'Sept.', 'Oct.', 'Nov.', 'Dec.']
+				month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
 				self.option2 = int(option2)
 				self.title = month[self.option2] #+'\\footnotesize{ (' +str(round(self.option3['samples_size_month'][self.option2])) +')} '
 			else:
@@ -304,7 +322,10 @@ class TableInput:
 			self.type = 'checkbox' # put hyphen-like title
 			self.option1 = int(self.option1)
 			self.title = '\\normalsize{'+self.get_content(None)+'}'
-			self.type = 'checkbox'
+		elif self.type == 'spark':
+			self.wid = 'c'
+			self.option1 = float(self.option1)
+			self.title = 'Frequency' 
 		else:
 			raise ValueError(self.type)
 
@@ -335,5 +356,17 @@ class TableInput:
 			if not self.option1:
 				self.option1 = 3
 			return self.option1*'$\\square$\\hspace{1ex} '
+		elif self.type == 'spark':
+			if not self.option1:
+				self.option1 = 0.6
 
+			def scale_value(val):
+				return min(1.0, val / self.option1)
+			pcts = ["  \\sparkspike {} {}\n".format(index/11., scale_value(val)) for index, val in enumerate(bird['freq']['month'])]
+			sparks = "".join(pcts)
+			return """
+\\begin{sparkline}{10}
+""" + sparks + """
+\\end{sparkline}
+"""
 
