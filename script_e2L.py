@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+import os
 import e2L
+import sys
+import urllib.parse
+import unidecode
 
 
 projet_name = "Sweden"

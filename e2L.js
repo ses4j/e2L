@@ -129,6 +129,9 @@ jQuery(document).ready(function(){
 		onInitialize: function(){
 			jQuery.get('https://zoziologie.raphaelnussbaumer.com/wp-content/plugins/e2L/LocationList.json',function(data) {
 				LocationList = data;
+				LocationList.forEach(function(l){
+						l.name = l.name + " ("+l.code+")"
+				})
 				sel_loc.addOption(LocationList)
 			});
 		},
@@ -141,12 +144,15 @@ jQuery(document).ready(function(){
 	sel_loc  = $sel_loc[0].selectize;
 
 
+
 	// Date
 	jQuery('#div-date-begin').datepicker({
 		format: "mm-yyyy",
 		startView: "months", 
-		minViewMode: "months"
+		minViewMode: "months",
 	});
+	d = new Date()
+	jQuery('#div-date-begin > input:nth-child(3)').val((d.getMonth()+1).toString()+"-"+(d.getYear()+1900).toString())
 
 
 	/*jQuery('#margin').change(function(e){
@@ -215,6 +221,7 @@ jQuery(document).ready(function(){
 					}).on('click',function(){
 						loc = h['loc-id'];
 						jQuery('#checklistname').html(h['loc-name']);
+						map.panTo(this._latlng);
 						console.log(this)
 					})
 					/*var popup = jQuery('<div/>') 
