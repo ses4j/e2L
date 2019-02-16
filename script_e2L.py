@@ -1,10 +1,14 @@
 #!/usr/bin/env python
+import os
 import e2L
+import sys
+import urllib.parse
+import unidecode
 
 
 projet_name = "Sweden"
 print('Start Project: '+ projet_name)
-
+filename = unidecode.unidecode(projet_name).replace(' ','_').replace("'",'').replace('.','')
 
 #1. Create the Bird List loading data from eBird
 code_loc = 'SE' # See possible country code here : https://confluence.cornell.edu/display/CLOISAPI/eBird-1.1-HotSpotsByRegion + region code for each region ? where ?
@@ -49,7 +53,7 @@ condition_rare = ['\\footnotesize{>.1\\%}'," (bird['freq']['year'] < .01) and (b
 
 ## Write To LateX
 #print('Write to latex')
-e2L.write_to_latex(projet_name,bird_list,col,condition_tableau, condition_rare, family, format, info)
+e2L.write_to_latex(projet_name,filename,bird_list,col,condition_tableau, condition_rare, family, format, info)
 
 #os.chdir('Latex'); os.system(projet_name+'.tex');os.chdir('..')
 

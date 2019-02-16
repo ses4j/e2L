@@ -108,7 +108,12 @@ def bird_creator(code_loc, lang, cat, byear, eyear, bmonth, emonth):
 				bird = taxa_bird
 				bird['freq'] = {}
 				bird['freq']['week'] = bc_bird['freq']
-				bird['freq']['month'], bird['freq']['season'], bird['freq']['year'] = week_to_else(bird['freq']['week'])
+				bird_nb_week = list(map(lambda x,y:x*y,bird['freq']['week'],info['samples_size']['week']))
+				bird_nb_month, bird_nb_season, bird_nb_year = week_to_else(bird_nb_week)
+				bird['freq']['month'] = list(map(lambda x,y:x/y, bird_nb_month, info['samples_size']['month']))
+				bird['freq']['season'] = list(map(lambda x,y:x/y, bird_nb_season, info['samples_size']['season']))
+				bird['freq']['year'] = bird_nb_year/info['samples_size']['year']
+				#print(info['samples_size']['year'])
 				bird['family']=''
 				bird_list.append(bird)
 
@@ -141,9 +146,11 @@ def load_barchart(code_loc, byear, eyear, bmonth, emonth):
 			info['samples_size']['week'] = [int(float(i)) for i in line.replace("Sample Size:","").split()]
 			assert len(info['samples_size']['week'])>0, 'Empty Barchart! Check the barchart link above, maybe there is not data for your query or the query is wrong'
 			info['samples_size']['month'], info['samples_size']['season'], info['samples_size']['year'] = week_to_else(info['samples_size']['week'])
-			info['samples_size']['month'] = [i*4 for i in info['samples_size']['month']];
-			info['samples_size']['season'] = [i*12 for i in info['samples_size']['season']];
-			info['samples_size']['year'] = info['samples_size']['year']*48;
+			print(info['samples_size']['week'])
+			print(info['samples_size']['year'])
+			#info['samples_size']['month'] = [i*4 for i in info['samples_size']['month']];
+			#info['samples_size']['season'] = [i*12 for i in info['samples_size']['season']];
+			#info['samples_size']['year'] = info['samples_size']['year']*48;
 		else:
 			comName, line = line.split('\t',1)
 			#name_la,line = line.split('\t',1)
@@ -192,25 +199,25 @@ def week_to_else(week):
 	for i in range(0,len(week)):
 		t_m.append(week[i])
 		if i%4 == 3:
-			month.append(sum(b for b in t_m) / len(t_m))
+			month.append(sum(b for b in t_m))
 			t_m = []
 	assert len(month) == 12,'Month frequency is not equal to 12'
 	#Season
 	season = []
-	season.append(sum(b for b in month[2:5]) / 3)
-	season.append(sum(b for b in month[5:8]) / 3)
-	season.append(sum(b for b in month[8:11]) / 3)
-	season.append(sum(b for b in month[0:2] + [month[11]]) / 3)
+	season.append(sum(b for b in month[2:5]))
+	season.append(sum(b for b in month[5:8]))
+	season.append(sum(b for b in month[8:11]))
+	season.append(sum(b for b in month[0:2] + [month[11]]))
 	#Year
-	year = sum(b for b in week) / len(week)
+	year = sum(b for b in week)
 	return month, season, year
 
 
-def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, family, format, info, template_path='Template_default.tex'):
+def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, family, format, info):
 	family_current = ''
 
 	# Start Writing
-	f = open('latex/'+ projname.replace(' ','')  + '.tex', 'w')
+	f = codecs.open('latex/'+ filename  + '.tex', 'w+', encoding='utf8')
 
 	# Import preformatted text
 	f2 = open(template_path, 'r')
@@ -223,16 +230,18 @@ def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, 
 			continue
 			#line = condition_tableau[0]+'\n'
 		elif '_format_' in line:
-			line = '\\usepackage['+format+']{geometry}'
+			line = '\\usepackage['+format+']{geometry}\n'
+		elif '_linespacing_' in line:
+			line = '\\renewcommand{\\arraystretch}{' + spacing + '}\n'
 		elif '_projectname_' in line:
-			line = '\\LARGE{'+projname+' Bird Checklist}\\\\'
+			line = '\\LARGE{'+projname+'}\\\\'
 		elif '_noteline_' in line:
-			line = 3*'\\newnoteline'
-		elif 'begin{tabularx' in line:
+			line = 3*'\\newnoteline\n'
+		elif 'begin{xtabular*' in line:
 			line = line[:-1]
 			for c in col: # write column width
 				line += c.wid
-			line += '}'
+			line += '}\n'
 		elif '_columntitle_' in line:
 			line = ''
 			for c in col[:-1]: # write title
@@ -252,7 +261,10 @@ def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, 
 		elif '_rare_' in line:
 			line = ''
 			# Table Rare
-			n_rare_col = 3
+			if 'onecolumn' in format:
+				n_rare_col = 3
+			else:
+				n_rare_col = 2
 			col_r = TableInput(info,'lang','EN')
 			bird_list_r = []
 			for bird in bird_list:
@@ -266,19 +278,19 @@ def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, 
 					bird_list_r.append('\\underline{\\hfill}')
 					u = len(bird_list_r)
 				c = round(u/n_rare_col)
-				f.write('\\begin{tabularx}{\\textwidth}{')
+				f.write('\\begin{xtabular*}{\\linewidth}{@{\\extracolsep{\\fill}}')
 				for x in range(0,n_rare_col):
-					f.write('cX')
+					f.write('cl')
 				f.write('} \n')
-				f.write('\\hline\n\\\\\n')
+				f.write('\\toprule\n\\\\\n')
 				f.write('\\multicolumn{'+str(2*n_rare_col)+'}{c}{\\textsc{ \\Large{Rare'+condition_rare[0]+'}}} \\\\ \n')
-				f.write('\\\\\n\\hline\n')
+				f.write('\\\\\n\\midrule\n')
 				for cc in range(0,c):
 					for c_r in range(0,n_rare_col-1):
 						f.write('\\underline{\\hspace{3ex}} \t &' + bird_list_r[cc+c*c_r] +' \t &')
 					f.write('\\underline{\\hspace{3ex}} \t &' + bird_list_r[cc+c*(n_rare_col-1)]+' \\\\ \n')
-				f.write('\\hline\n')
-				f.write('\\end{tabularx} ')
+				f.write('\\bottomrule\n')
+				f.write('\\end{xtabular*} ')
 		f.write(line)
 	f2.close()
 
@@ -292,7 +304,7 @@ class TableInput:
 		self.option2 = option2
 		self.option3 = option3
 		if self.type == 'lang':
-			self.wid = 'X'
+			self.wid = 'l'
 			idx = [l[1] for l in LANGUAGE].index(self.option1.upper())
 			self.title = LANGUAGE[idx][0]
 		elif self.type == 'freq':
@@ -306,20 +318,23 @@ class TableInput:
 			elif self.option1 == 'month':
 				month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
 				self.option2 = int(option2)
-				self.title = month[self.option2] #+'\\footnotesize{ (' +str(round(self.option3['samples_size_month'][self.option2])) +')} '
+				self.title = month[self.option2] #+'\\footnotesize{ (' +str(round(info['samples_size']['month'][self.option2])) +')} '
+			elif self.option1 == 'week':
+				self.option2 = int(option2)
+				self.title = 'Week '+ str(self.option2) #+'\\footnotesize{ (' +str(round(info['samples_size']['week'][self.option2])) +')} '
 			else:
 				raise ValueError(self.option1)
 		elif self.type == 'note':
 			self.wid = 'c'
 			self.title = 'Note'
-		elif self.type == 'hyphen':
+		elif self.type == 'line':
 			self.option1 = int(self.option1)
 			self.wid = 'c'
 			alphabet = 'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'
 			self.title = '\\normalsize{'+self.get_content(None)+'}'
 		elif self.type == 'checkbox':
 			self.wid = 'c'
-			self.type = 'checkbox' # put hyphen-like title
+			self.type = 'checkbox' # put line-like title
 			self.option1 = int(self.option1)
 			self.title = '\\normalsize{'+self.get_content(None)+'}'
 		elif self.type == 'spark':
@@ -342,11 +357,13 @@ class TableInput:
 				return '\\databar{'+'{:.1f}'.format(bird['freq']['season'][self.option2]*100) +'}'
 			elif self.option1 == 'month':
 				return '\\databar{'+'{:.1f}'.format(bird['freq']['month'][self.option2]*100) +'}'
+			elif self.option1 == 'week':
+				return '\\databar{'+'{:.1f}'.format(bird['freq']['week'][self.option2]*100) +'}'
 		elif self.type == 'note':
 			if not self.option1:
 				self.option1 = '4cm'
 			return '\\dotuline{\\hspace{'+self.option1+'}}'
-		elif self.type == 'hyphen':
+		elif self.type == 'line':
 			if not self.option1:
 				self.option1 = 3
 			if not self.option2:
