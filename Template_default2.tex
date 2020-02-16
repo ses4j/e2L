@@ -1,0 +1,79 @@
+\documentclass{article}
+
+%\usepackage[french]{babel}
+%\usepackage{longtable}
+%\usepackage{ltablex}
+\usepackage{xtab}
+\usepackage{amssymb}
+\usepackage{array}
+_format_
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[table]{xcolor}% http://ctan.org/pkg/xcolor
+\usepackage[nomessages]{fp}% http://ctan.org/pkg/fp
+\usepackage{ulem}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{sparklines}
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+\newcommand{\maxnum}{
+\newlength{\maxlen}
+\newcommand{\databar}[2][blue!25]{%
+  \settowidth{\maxlen}{\maxnum}%
+  \addtolength{\maxlen}{\tabcolsep}%
+  \FPeval\result{round(#2/\maxnum:4)}%
+  \rlap{\color{blue!25}\hspace*{-.5\tabcolsep}\rule[-.05\ht\strutbox]{\result\maxlen}{.95\ht\strutbox}}%
+  \makebox[\dimexpr\maxlen-\tabcolsep][r]{#2}%
+}
+\renewcommand*\rmdefault{iwona}
+\newcommand{\newnoteline}{\rule{\textwidth}{0.15mm}\\[1.5ex]}
+
+% prevent tables from being broken too early
+\xentrystretch{-0.1}
+% increase spacing between table's rows
+_linespacing_ 
+
+\setlength{\sparkdotwidth}{1.3pt}
+\setlength{\sparklinethickness}{.3pt}
+\setlength{\sparkspikewidth}{3pt}
+
+\begin{document}
+
+
+\centering
+_projectname_
+
+\normalsize \raggedright
+
+
+%Birder(s): \underline{\hspace{112ex}}\\[1.5ex]
+%Location: \underline{\hspace{28ex}}    Date: \underline{\hspace{13ex}}    Start time: \underline{\hspace{10ex}}   Duration: \underline{\hspace{10ex}}    Distance: \underline{\hspace{10ex}}\\[1.5ex]
+
+
+%_ noteline_
+
+
+
+\begin{center}
+
+\begin{xtabular*}{\linewidth}{@{\extracolsep{\fill}}
+\toprule
+_columntitle_
+\midrule
+_content_
+\bottomrule
+\let\thefootnote\relax\footnote{
+Checklist generated on \today{}  with occurrence and frequency computed from checklist submitted on \href{www.ebird.org}{eBird}. Scientific names and systematic order follow \href{http://www.birds.cornell.edu/clementschecklist/download/}{Clements Checklist 6.9 (eBird 1.55)}.
+ _condition_ 
+ Generated with \href{http://zoziologie.raphaelnussbaumer.com/ebirdtolatex/}{ebirdToLaTeX} python code. Comment, suggestion? \href{mailto:rafnuss@gmail.com}{rafnuss@gmail.com}}
+\end{xtabular*}
+
+ 
+_rare_
+
+\end{center}
+\end{document}

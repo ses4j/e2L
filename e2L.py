@@ -71,14 +71,14 @@ def _fetch_data(url, filename, expires=None):
     if not os.path.exists(filepath):
         logger.info('{} does not exist -- downloading from {}.'.format(filepath, url))
         data = requests.get(url)
-        f = open(filepath, 'w')
+        f = open(filepath, 'w', encoding='utf-8')
         f.write(data.text)
         f.close()
     else:
         logger.debug('{} exists -- using cache for {}.'.format(filepath, url))
 
 
-    return open(filepath)
+    return open(filepath, encoding='utf-8')
 
 
 def bird_creator(code_loc, lang, cat, byear, eyear, bmonth, emonth):
@@ -212,8 +212,39 @@ def week_to_else(week):
 	year = sum(b for b in week)
 	return month, season, year
 
+def latex_escape(text):
+    """
+        This function comes from:
+        http://stackoverflow.com/questions/16259923/how-can-i-escape-latex-special-characters-inside-django-templates
 
-def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, family, format, info):
+        :param text: a plain text message
+        :return: the message escaped to appear correctly in LaTeX
+    """
+    escape_conv = {
+        '“': '``',
+        '”': "''",
+        '–': '-',
+        '&': r'\&',
+        '%': r'\%',
+        '$': r'\$',
+        '#': r'\#',
+        '_': r'\_',
+        '{': r'\{',
+        '}': r'\}',
+        '~': r'\textasciitilde{}',
+        '^': r'\^{}',
+        '\\': r'\textbackslash{}',
+        '<': r'\textless',
+        '>': r'\textgreater',
+    }
+    import re
+    regex = re.compile(
+        '|'.join(re.escape(str(key)) for key in sorted(list(escape_conv.keys()), key=lambda item: -len(item)))
+    )
+    return regex.sub(lambda match: escape_conv[match.group()], text or '')
+
+
+def write_to_latex(projname, filename, bird_list, col, condition_tableau, condition_rare, family, format, spacing, info, template_path, title=''):
 	family_current = ''
 
 	# Start Writing
@@ -234,7 +265,7 @@ def write_to_latex(projname, bird_list, col, condition_tableau, condition_rare, 
 		elif '_linespacing_' in line:
 			line = '\\renewcommand{\\arraystretch}{' + spacing + '}\n'
 		elif '_projectname_' in line:
-			line = '\\LARGE{'+projname+'}\\\\'
+			line = '{\\LARGE '+latex_escape(projname)+'}\\\\'
 		elif '_noteline_' in line:
 			line = 3*'\\newnoteline\n'
 		elif 'begin{xtabular*' in line:
@@ -386,4 +417,3 @@ class TableInput:
 """ + sparks + """
 \\end{sparkline}
 """
-
